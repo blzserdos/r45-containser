@@ -1,0 +1,52 @@
+name: Build R 4.5 Apptainer container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "r45.def"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:          # allow manual trigger from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write         # needed to create a GitHub Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Apptainer
+        uses: apptainer/apptainer-install@v1   # installs the current stable Apptainer
+
+      - name: Build .sif
+        run: |
+          sudo apptainer build r45.sif r45.def
+
+      - name: Smoke-test the container
+        run: |
+          apptainer exec r45.sif Rscript -e "
+            pkgs <- c('tidyverse', 'data.table', 'mirt')
+            ok   <- sapply(pkgs, requireNamespace, quietly = TRUE)
+            stopifnot(all(ok))
+            cat('Packages OK\n')
+            cat(R.version.string, '\n')
+          "
+
+      - name: Get short SHA for tag
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and upload .sif
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ steps.sha.outputs.short }}"
+          name: "R 4.5.0 container – ${{ steps.sha.outputs.short }}"
+          body: |
+            Apptainer .sif image built from `r45.def`.
+            **Includes:** tidyverse · data.table · mirt (+ dependencies)
+            **R version:** 4.5.0
+          files: r45.sif
+          make_latest: true

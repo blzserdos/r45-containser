@@ -1,0 +1,66 @@
+Bootstrap: docker
+From: rocker/r-ver:4.5.0
+
+%labels
+    Author       your-github-username
+    Version      1.0.0
+    R.version    4.5.0
+    Description  R 4.5.0 with tidyverse, data.table, and mirt
+
+%post
+    # ── System dependencies ────────────────────────────────────────────────
+    apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libfreetype6-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        libpng-dev \
+        zlib1g-dev \
+        libgit2-dev \
+        libgmp-dev \
+        libmpfr-dev \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    # ── R packages ────────────────────────────────────────────────────────
+    # Use a fixed CRAN snapshot for reproducibility (adjust date as needed)
+    Rscript -e "
+      options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/2025-04-01'))
+      install.packages(c(
+        'tidyverse',
+        'data.table',
+        'mirt'
+      ), dependencies = TRUE, Ncpus = parallel::detectCores())
+    "
+
+    # ── Verify installations ──────────────────────────────────────────────
+    Rscript -e "
+      pkgs <- c('tidyverse', 'data.table', 'mirt')
+      ok   <- sapply(pkgs, requireNamespace, quietly = TRUE)
+      if (!all(ok)) stop('Missing packages: ', paste(pkgs[!ok], collapse=', '))
+      cat('All packages OK\n')
+      cat(R.version.string, '\n')
+    "
+
+%environment
+    export LC_ALL=C
+    export LANG=C
+
+%runscript
+    exec Rscript "$@"
+
+%help
+    R 4.5.0 container with:
+      - tidyverse   (ggplot2, dplyr, tidyr, readr, purrr, stringr, …)
+      - data.table  (fast data manipulation)
+      - mirt        (multidimensional item response theory)
+
+    Usage:
+      apptainer run r45.sif my_script.R
+      apptainer exec r45.sif Rscript -e "library(mirt); sessionInfo()"
+      apptainer shell r45.sif
