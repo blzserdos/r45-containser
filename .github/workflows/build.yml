@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Apptainer
-        uses: apptainer/apptainer-install@v1   # installs the current stable Apptainer
+        uses: eWaterCycle/setup-apptainer@v2
 
       - name: Build .sif
         run: |
